@@ -1,19 +1,14 @@
-﻿using System;
-using System.Text;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using NUnit.Framework;
 using OrigoDB.Modules.ProtoBuf;
-using System.IO;
 using Modules.ProtoBuf.Test.Framework;
 using Modules.ProtoBuf.Test.Domain;
 
 namespace Modules.ProtoBuf.Test
 {
-    [TestClass]
+    [TestFixture]
     public class ProtoBufStreamHeaderTests
     {
-        [TestMethod]
+        [Test]
         public void HeaderReadFromStreamContainsCorrectLength()
         {
             var stream = SerializationHelper.Serialize<Employee>(new Employee());
@@ -24,7 +19,7 @@ namespace Modules.ProtoBuf.Test
             Assert.AreEqual(expectedHeader.Length, header.Length);
         }
 
-        [TestMethod]
+        [Test]
         public void HeaderReadFromStreamContainsCorrectTypeName()
         {
             var stream = SerializationHelper.Serialize<Employee>(new Employee());
@@ -35,7 +30,7 @@ namespace Modules.ProtoBuf.Test
             Assert.AreEqual(expectedHeader.TypeName, header.TypeName);
         }
 
-        [TestMethod]
+        [Test]
         public void HeaderReadFromStreamContainsCorrectBuffer()
         {
             var stream = SerializationHelper.Serialize<Employee>(new Employee());

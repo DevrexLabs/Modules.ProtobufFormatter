@@ -1,30 +1,25 @@
-﻿using System;
-using System.Text;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using NUnit.Framework;
 using OrigoDB.Modules.Protobuf;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OrigoDB.Modules.ProtoBuf;
 using System.Runtime.Serialization;
-using System.IO;
-using System.Reflection;
 using Modules.ProtoBuf.Test.Framework;
 using Modules.ProtoBuf.Test.Domain;
-using ProtoBuf.Meta;
 
 namespace Modules.ProtoBuf.Test
 {
-    [TestClass]
+    [TestFixture]
     public class ProtoBufFormatterTests
     {
-        [TestMethod]
+        [Test]
         public void FormatterHasStreamingContext()
         {
             var formatter = new ProtoBufFormatter();
             Assert.IsNotNull(formatter.Context);
         }
 
-        [TestMethod]
+        [Test]
         public void SerializationContextStateIsSetToPersistence()
         {
             var formatter = new ProtoBufFormatter();
@@ -32,7 +27,7 @@ namespace Modules.ProtoBuf.Test
         }
 
 
-        [TestMethod]
+        [Test]
         public void CanDeserializeType()
         {
             // Arrange
@@ -44,13 +39,13 @@ namespace Modules.ProtoBuf.Test
             var result = SerializationHelper.Deserialize<Employee>(stream, formatter);
 
             // Act
-            Assert.IsInstanceOfType(result, typeof(Employee));
+            Assert.IsInstanceOf<Employee>(result);
             Assert.AreEqual("Kalle", result.Name);
             Assert.AreEqual(42, result.Age);
             Assert.AreEqual(16,result.ShoeSize);
         }
 
-        [TestMethod]
+        [Test]
         public void CanDeserializeComplexType()
         {
             // Arrange
@@ -66,7 +61,7 @@ namespace Modules.ProtoBuf.Test
             };
 
             //hack. triggers E#mployee type to be added to the TypeModel
-            SerializationHelper.Serialize(new Employee(), formatter);
+            //SerializationHelper.Serialize(new Employee(), formatter);
             
             // Act
             var stream = SerializationHelper.Serialize<Company>(graph, formatter);
@@ -80,14 +75,14 @@ namespace Modules.ProtoBuf.Test
             Assert.AreEqual("Michael Bolton", result.Employees.ElementAt(1).Name);
         }
 
-        [TestMethod]
+        [Test]
         public void NonSerializedTypeIsNotConsideredKnown()
         {
             var formatter = new ProtoBufFormatter();
             Assert.IsFalse(formatter.IsKnownType(typeof(Employee)));
         }
 
-        [TestMethod]
+        [Test]
         public void SerializedTypeIsConsideredKnown()
         {
             var formatter = new ProtoBufFormatter();

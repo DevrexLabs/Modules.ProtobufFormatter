@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Runtime.Serialization;
 using System.IO;
 using OrigoDB.Modules.Protobuf;
 using ProtoBuf;
 using System.Reflection;
-using System.Threading;
-using ProtoBuf.Meta;
 
 namespace OrigoDB.Modules.ProtoBuf
 {
@@ -20,7 +16,6 @@ namespace OrigoDB.Modules.ProtoBuf
     {
         private StreamingContext _context;
         private readonly Dictionary<string, Type> _typeLookup;
-        //private RuntimeTypeModel _typeModel;
         private RuntimeTypeModelBuilder _modelBuilder;
 
 

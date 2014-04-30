@@ -1,12 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Reflection;
-using System.Text;
 using System.Collections.Generic;
 using System.Linq;
+using NUnit.Framework;
 using OrigoDB.Core;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using ProtoBuf;
 using ProtoBuf.Meta;
 
 namespace Modules.ProtoBuf.Test
@@ -85,11 +83,6 @@ namespace Modules.ProtoBuf.Test
 
         }
 
-        //public MyMessage()
-        //{
-        //    MyField = 18;
-        //}
-
         public override void Execute(MyModel model)
         {
 
@@ -119,7 +112,7 @@ namespace Modules.ProtoBuf.Test
         }
     }
 
-    [TestClass]
+    [TestFixture]
     public class SmokeTests
     {
 
@@ -131,12 +124,9 @@ namespace Modules.ProtoBuf.Test
 
         private bool IsDefined(RuntimeTypeModel typeModel, Type theSoughtType)
         {
-            foreach (MetaType aDefinedMetaType in typeModel.GetTypes())
-            {
-                if (theSoughtType == aDefinedMetaType.Type) return true;
-            }
-            return false;
-
+            return typeModel.GetTypes()
+                .Cast<MetaType>()
+                .Any(metaType => theSoughtType == metaType.Type);
         }
 
         private void Add<T>(RuntimeTypeModel typeModel)
@@ -184,12 +174,11 @@ namespace Modules.ProtoBuf.Test
             return fieldNames;
         }
 
-        private MetaType AddInferredFields(MetaType metaType, out int numFields, bool includeInherited = true)
+        private void AddInferredFields(MetaType metaType, out int numFields, bool includeInherited = true)
         {
             var fieldNames = FieldNames(metaType.Type, includeInherited);
             metaType.Add(fieldNames);
             numFields = fieldNames.Length;
-            return metaType;
         }
 
         private TReturn Clone<TReturn, TRead>(TypeModel typeModel, TRead o, out long bytesWritten)
@@ -202,77 +191,76 @@ namespace Modules.ProtoBuf.Test
             return (TReturn)typeModel.Deserialize(memStream, null, typeof(TRead));
         }
 
-        [TestMethod]
+        [Test]
         public void no_config()
         {
-            var typeModel = RuntimeTypeModel.Create();
+            var typeModel = TypeModel.Create();
             typeModel.AutoAddMissingTypes = true;
             CloneAndCompare(typeModel);
 
         }
 
-        private long CloneAndCompare(RuntimeTypeModel typeModel)
+        private void CloneAndCompare(RuntimeTypeModel typeModel)
         {
             DateTime created = DateTime.Now;
             var entry = new JournalEntry<MyMessage3>(42, new MyMessage3(43, "dalmatians"), created);
             long bytesWritten;
-            var clonedEntry = (JournalEntry<MyMessage3>)Clone<JournalEntry<MyMessage3>, JournalEntry>(typeModel, entry, out bytesWritten);
-            Assert.AreEqual((ulong) 42, clonedEntry.Id);
+            var clonedEntry = Clone<JournalEntry<MyMessage3>, JournalEntry>(typeModel, entry, out bytesWritten);
+            Assert.AreEqual(42, clonedEntry.Id);
             Assert.AreEqual(created, clonedEntry.Created);
             Assert.AreEqual(43, clonedEntry.Item.MyField);
             Assert.AreEqual("dalmatians", clonedEntry.Item.MyField2);
-            return bytesWritten;
         }
 
-        [TestMethod]
+        [Test]
         public void empty_class_with_parameterized_constructor_is_undefined()
         {
-            var typeModel = RuntimeTypeModel.Create();
+            var typeModel = TypeModel.Create();
             Assert.IsFalse(typeModel.IsDefined(typeof(EmptyClassWithParameterizedConstructor)));
         }
 
 
-        [TestMethod]
+        [Test]
         public void class_without_fields_is_undefined()
         {
-            var typeModel = RuntimeTypeModel.Create();
+            var typeModel = TypeModel.Create();
             Assert.IsFalse(typeModel.IsDefined(typeof(ClassWithoutAnyFields)));
         }
 
-        [TestMethod]
+        [Test]
         public void class_with_readonly_field_and_matching_parameterized_constructor_is_undefined()
         {
-            var typeModel = RuntimeTypeModel.Create();
+            var typeModel = TypeModel.Create();
             Assert.IsFalse(typeModel.IsDefined(typeof(ClassWithOnePublicReadonlyFieldAndMatchingParameterizedConstructor)));
         }
 
-        [TestMethod]
+        [Test]
         public void class_without_private_fields_is_undefined()
         {
-            var typeModel = RuntimeTypeModel.Create();
+            var typeModel = TypeModel.Create();
             Assert.IsFalse(typeModel.IsDefined(typeof(ClassWithPrivateRegularField)));
         }
 
-        [TestMethod]
+        [Test]
         public void class_with_readonly_fields_is_undefined()
         {
-            var typeModel = RuntimeTypeModel.Create();
+            var typeModel = TypeModel.Create();
             Assert.IsFalse(typeModel.IsDefined(typeof(ClassWithAReadonlyField)));
         }
 
 
-        [TestMethod]
+        [Test]
         public void IsDefined_on_empty_model_should_return_false()
         {
-            var typeModel = RuntimeTypeModel.Create();
+            var typeModel = TypeModel.Create();
             Assert.IsFalse(typeModel.IsDefined(typeof(FailingType)));
         }
 
-        [TestMethod]
+        [Test]
         public void private_inherited_fields_are_handled()
         {
 
-            var typeModel = RuntimeTypeModel.Create();
+            var typeModel = TypeModel.Create();
             Add<HelloSubProto>(typeModel);
 
 
@@ -289,7 +277,7 @@ namespace Modules.ProtoBuf.Test
 
 
 
-        [TestMethod]
+        [Test]
         public void can_add_type_already_added()
         {
             var model = TypeModel.Create();
@@ -297,7 +285,7 @@ namespace Modules.ProtoBuf.Test
             Add<JournalEntry<MyMessage3>>(model);
         }
 
-        [TestMethod]
+        [Test]
         public void stream_is_same_size_when_type_added_more_than_once()
         {
             var model = TypeModel.Create();
@@ -316,7 +304,7 @@ namespace Modules.ProtoBuf.Test
             Assert.AreEqual(bytesWrittenSingle, bytesWrittenDouble);
         }
 
-        [TestMethod]
+        [Test]
         public void subtype_is_returned_when_basetype_is_requested()
         {
             var model = TypeModel.Create();
@@ -326,7 +314,7 @@ namespace Modules.ProtoBuf.Test
 
         }
 
-        [TestMethod]
+        [Test]
         public void generic_subtype_is_returned_when_basetype_is_requested()
         {
             var model = TypeModel.Create();
@@ -339,11 +327,11 @@ namespace Modules.ProtoBuf.Test
             DateTime created = DateTime.Now;
             var entry = new JournalEntry<Command>(42, new MyMessage3(43, "dalmatians"), created);
             long bytesWritten;
-            var clonedEntry = (JournalEntry<Command>)Clone<JournalEntry<Command>, JournalEntry>(model, entry, out bytesWritten);
-            Assert.AreEqual((ulong) 42, clonedEntry.Id);
+            var clonedEntry = Clone<JournalEntry<Command>, JournalEntry>(model, entry, out bytesWritten);
+            Assert.AreEqual(42, clonedEntry.Id);
             Assert.AreEqual(created, clonedEntry.Created);
 
-            var item = clonedEntry.Item as MyMessage3;
+            var item = (MyMessage3) clonedEntry.Item;
 
             Assert.AreEqual(43,item.MyField);
             Assert.AreEqual("dalmatians", item.MyField2);
