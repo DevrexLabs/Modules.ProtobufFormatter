@@ -12,18 +12,18 @@ my $nuget = "nuget.exe";
 my $sevenZip = "C:/Program Files/7-Zip/7z.exe";
 
 
-my $version = extract('src/SharedAssemblyInfo.cs');
+my $version = extract('OrigoDB.Modules.ProtoBuf/Properties/AssemblyInfo.cs');
 die "missing or bad version: [$version]\n" unless $version =~ /^\d+\.\d+\.\d+(-[a-z]+)?$/;
 
 my $target = shift || 'default';
 my $config = shift || 'Release';
 
 
-my $solution = 'src/OrigoDB.sln';
+my $solution = 'OrigoDB.Modules.Protobuf.sln';
 my $output = "build";
 
 
-my $x = "src/OrigoDB.*/bin/$config/";
+my $x = "OrigoDB.Modules.Protobuf/bin/$config/";
 
 
 sub run;
@@ -44,16 +44,18 @@ my $targets = {
 	},
 	copy => sub 
 	{
-		system("cp -r $x/OrigoDB.* $output");
+		system("cp -r $x/* $output");
 		#remove test assemblies
 		system("rm $output/*Test*");
 	},
 	zip => sub {
-		system "\"$sevenZip\" a -r -tzip OrigoDB.Core.binaries.$version-$config.zip build/*";
+		chdir "build";
+		system "\"$sevenZip\" a -r -tzip ../OrigoDB.Modules.Protobuf.binaries.$version-$config.zip *";
+		chdir "..";
 	},
 	pack => sub
 	{
-		system("$nuget pack OrigoDB.Core.nuspec -OutputDirectory build -version $version -symbols")
+		system("$nuget pack OrigoDB.ProtoBuf.nuspec -OutputDirectory build -version $version -symbols")
 	}
 };
 

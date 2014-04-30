@@ -3,24 +3,26 @@
   <metadata>
     <id>OrigoDB.ProtoBuf</id>
     <title>OrigoDb ProtoBuf Serialization Module</title>
-    <version>0.1.2</version>
-    <authors>Robert Friberg, Kristoffer Schroeder et al</authors>
+    <version>0.2.0</version>
+    <authors>Robert Friberg, Patrik Svensson</authors>
     <copyright>Copyright Devrex Labs</copyright>
     <summary>Enable OrigoDb serialization with ProtoBuf</summary>
     <description>
 	Enable OrigoDb serialization with ProtoBuf
     </description>
-    <projectUrl>https://github.com/devrexlabs/origodb</projectUrl>
+    <projectUrl>https://github.com/devrexlabs/modules.protobufformatter</projectUrl>
     <licenseUrl>https://github.com/devrexlabs/origodb#license</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <releaseNotes>Can be found on project site: https://github.com/devrexlabs/origodb/wiki/release-notes</releaseNotes>
+    <releaseNotes>https://github.com/devrexlabs/origodb/releases</releaseNotes>
     <tags>in-memory imdb nosql prevalence odbms database imc</tags>
     <dependencies>
-		<dependency id="OrigoDb.Core" version="0.10.0"/>
 		<dependency id="protobuf-net" version="2.0.0"/>
     </dependencies>
   </metadata>
   <files>
-     <file src="OrigoDB.Modules.ProtoBuf.dll" target="lib"/>
+	<file src="build\OrigoDB.*.dll" target="lib\net40" />
+    <file src="build\OrigoDB.*.pdb" target="lib\net40" />
+    <file src="build\OrigoDB.*.XML" target="lib\net40" />
+    <file src="OrigoDB.Modules.Protobuf\**\*.cs" target="src" />
   </files>
 </package>
