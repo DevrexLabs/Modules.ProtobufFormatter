@@ -1,10 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.IO;
-using OrigoDB.Modules.Protobuf;
+using System.Text;
+using OrigoDB.Core;
+using OrigoDB.Core.Journaling;
 using ProtoBuf;
-using System.Reflection;
+using ProtoBuf.Meta;
+using OrigoDB.Core.Utilities;
 
 namespace OrigoDB.Modules.ProtoBuf
 {
@@ -12,11 +14,23 @@ namespace OrigoDB.Modules.ProtoBuf
     /// Provides functionality for formatting serialized objects
     /// using ProtoBuf serialization.
     /// </summary>
-    public sealed class ProtoBufFormatter : IFormatter
+    public class ProtoBufFormatter : IFormatter
     {
-        private StreamingContext _context;
-        private readonly Dictionary<string, Type> _typeLookup;
-        private RuntimeTypeModelBuilder _modelBuilder;
+        readonly RuntimeTypeModel _typeModel;
+
+
+        /// <summary>
+        /// Prefix each serialized object with its assembly qualified name
+        /// </summary>
+        public readonly bool IncludeTypeName;
+
+        /// <summary>
+        /// Write the length of the serialized object as part of the header.
+        /// Necessary when sending multiple objects to the same stream,
+        /// avoid for large graphs because they must be buffered in memory
+        /// in order to figure out the size.
+        /// </summary>
+        public readonly bool UseLengthPrefix;
 
 
         /// <summary>
@@ -24,8 +38,7 @@ namespace OrigoDB.Modules.ProtoBuf
         /// </summary>
         public SerializationBinder Binder
         {
-            get { return null; }
-            set { /* Do nothing here since it's not used. */; }
+            get; set;
         }
 
         /// <summary>
@@ -33,8 +46,8 @@ namespace OrigoDB.Modules.ProtoBuf
         /// </summary>
         public StreamingContext Context
         {
-            get { return _context; }
-            set { _context = value; }
+            get; 
+            set;
         }
 
         /// <summary>
@@ -49,11 +62,25 @@ namespace OrigoDB.Modules.ProtoBuf
         /// <summary>
         /// Initializes a new instance of the <see cref="OrigoDB.Modules.ProtoBuf.ProtoBufFormatter"/> class.
         /// </summary>
-        public ProtoBufFormatter(RuntimeTypeModelBuilder modelBuilder = null)
+        public ProtoBufFormatter(RuntimeTypeModel typeModel = null, bool includeTypeName = true, bool useLengthPrefix = false)
         {
-            _context = new StreamingContext(StreamingContextStates.Persistence);
-            _typeLookup = new Dictionary<string, Type>();
-            _modelBuilder = modelBuilder ?? new RuntimeTypeModelBuilder();
+            IncludeTypeName = includeTypeName;
+            UseLengthPrefix = useLengthPrefix;
+            _typeModel = typeModel ?? TypeModel.Create();
+            Context = new StreamingContext(StreamingContextStates.Persistence);
+        }
+
+        /// <summary>
+        /// Dynamically configure the origodb types written to the journal
+        /// </summary>
+        private void RegisterJournalTypes()
+        {
+            //TODO: incomplete
+            var je = _typeModel.Add(typeof(JournalEntry), false);
+            je.AddField(1, "Id");
+            je.AddField(2, "Created");
+            je.AddSubType(3, typeof(JournalEntry<RollbackMarker>));
+            je.AddSubType(4, typeof(JournalEntry<Command>)).Add(1, "Item");
         }
 
         /// <summary>
@@ -64,60 +91,13 @@ namespace OrigoDB.Modules.ProtoBuf
         /// <returns>The top object of the deserialized graph.</returns>
         public object Deserialize(Stream stream)
         {
-            // Perform sanity checks.
-            if (stream == null)
-            {
-                throw new ArgumentNullException("stream");
-            }
+            Ensure.NotNull(stream, "stream");
 
-            // Read the type information from the stream.
-            ProtoBufStreamHeader header = ProtoBufStreamHeader.Read(stream);
-            string typeName = header.TypeName;
+            var type = GetType(stream);
 
-            // Already know this type?
-            Type type = null;
-            if (!_typeLookup.TryGetValue(typeName, out type))
-            {
-                /////////////////////////////////////////////////////////////////////////////////////////////
-                // The Type.GetType only works if the requested type exists in the
-                // currently executing assembly or in Mscorlib.dll, we therefore check
-                // this first - and if that doesn't work - we check the whole app-domain.
-                // Not the best idea since we potentially would do this every serialization
-                // if we swallow the exception that is thrown when we can't resolve the type.
-                // Hopefully, this is not something that is ignored by the consumer of the serializer...
-                /////////////////////////////////////////////////////////////////////////////////////////////
-
-                // The type did not exist in our cache.
-                type = this.ResolveType(typeName);
-                if (type == null)
-                {
-                    // We could not get the type representation.
-                    string message = string.Format("Type with full name '{0}' could not be resolved.", typeName);
-                    throw new ProtoBufFormatterException(message);
-                }
-
-                // Add the type to the cache.
-                _typeLookup.Add(typeName, type);
-            }
-
-            EnsureCanHandle(type);
-
-            // Deserialize the stream.
-            return  _modelBuilder.TypeModel.DeserializeWithLengthPrefix(
-                stream, 
-                null, 
-                type, 
-                PrefixStyle.Fixed32BigEndian, 
-                0);
-        }
-
-        /// <summary>
-        /// Throw an exception unless we can handle the type
-        /// </summary>
-        /// <param name="type"></param>
-        private void EnsureCanHandle(Type type)
-        {
-            _modelBuilder.Add(type);
+            return UseLengthPrefix
+                ? _typeModel.DeserializeWithLengthPrefix(stream, null, type, PrefixStyle.Base128, 0)
+                : _typeModel.Deserialize(stream, null, type);
         }
 
         /// <summary>
@@ -129,67 +109,97 @@ namespace OrigoDB.Modules.ProtoBuf
         /// All child objects of this root object are automatically serialized.</param>
         public void Serialize(Stream stream, object graph)
         {
-            // Perform sanity checks.
-            if (stream == null)
-            {
-                throw new ArgumentNullException("stream");
-            }
-            if (graph == null)
-            {
-                throw new ArgumentNullException("graph");
-            }
+            Ensure.NotNull(stream, "stream");
+            Ensure.NotNull(graph, "graph");
 
-            
-            Type type = graph.GetType();
-            EnsureCanHandle(type);
+            if (IncludeTypeName) 
+                new BinaryWriter(stream, Encoding.UTF8)
+                .Write(graph.GetType().AssemblyQualifiedName);
 
-            string typeName = type.FullName;
-            if (!_typeLookup.ContainsKey(typeName))
-            {
-                _typeLookup.Add(typeName, type);
-            }
-
-            
-
-            // Create the header and write it to the stream.
-            ProtoBufStreamHeader.Create(type).Write(stream);
-
-            // Perform the actual ProtoBuf serialization.
-            _modelBuilder.TypeModel.SerializeWithLengthPrefix(stream, graph, type, PrefixStyle.Fixed32BigEndian, 0, _context);
+            if (UseLengthPrefix)
+                _typeModel.SerializeWithLengthPrefix(stream, graph, graph.GetType(), PrefixStyle.Base128, 0);
+            else
+                _typeModel.Serialize(stream, graph);
         }
 
         /// <summary>
-        /// Returns whether or not a type is known to the formatter.
+        /// Determine what type to read when deserializing by reading the type name from the stream
         /// </summary>
-        /// <param name="type"></param>
+        /// <param name="stream"></param>
         /// <returns></returns>
-        public bool IsKnownType(Type type)
+        protected virtual Type GetType(Stream stream)
         {
-            return _typeLookup.ContainsKey(type.FullName);
+            Type result = null;
+            if (IncludeTypeName)
+            {
+                var typeName = new BinaryReader(stream, Encoding.UTF8).ReadString();
+                result = Type.GetType(typeName);
+            }
+            return result;
         }
 
-        private Type ResolveType(string typeName)
+        /// <summary>
+        /// Modify the given configuration to use ProtoBuf formatting
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="usage">the usage to configure</param>
+        /// <param name="typeModel">An optional typemodel</param>
+        public static void Configure(EngineConfiguration config, FormatterUsage usage, RuntimeTypeModel typeModel = null)
         {
-            // The type did not exist in our cache.
-            Type type = Type.GetType(typeName);
-            if (type != null)
+            switch (usage)
             {
-                return type;
+                case FormatterUsage.Default:
+                    throw new NotSupportedException("Call with a specific usage, not FormatterUsage.Default");
+                case FormatterUsage.Snapshot:
+                    throw new NotSupportedException("Can't configure for snapshots without a type parameter, call ConfigureSnapshots<T> passing the type of the model instead");
+                case FormatterUsage.Journal:
+                    config.SetFormatterFactory((cfg, fu) => new ProtoBufFormatter<JournalEntry>(typeModel: typeModel, useLengthPrefix: true), usage);
+                    break;
+                case FormatterUsage.Results:
+                    config.SetFormatterFactory((cfg,fu) => new ProtoBufFormatter(typeModel, true, true), usage);
+                    break;
+                case FormatterUsage.Messages:
+                    throw new NotSupportedException("Not supported in this version of the module");
+                default:
+                    throw new ArgumentOutOfRangeException("usage");
             }
-
-            // Try looking in the current application domain for the type.
-            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                type = assembly.GetType(typeName);
-                if (type != null)
-                {
-                    return type;
-                }
-            }
-
-            return null;
         }
 
+        /// <summary>
+        /// Modify the given configuration to use ProtoBuf formatting for snapshots.
+        /// </summary>
+        /// <typeparam name="T">The concrete type of the model</typeparam>
+        /// <param name="config">the configuration to modify</param>
+        /// <param name="typeModel">An optional runtime type configuration</param>
+        public static void ConfigureSnapshots<T>(EngineConfiguration config, RuntimeTypeModel typeModel)
+        {
+            config.SetFormatterFactory((cfg,fu) => new ProtoBufFormatter<T>(typeModel: typeModel), FormatterUsage.Snapshot);
+        }
+    }
 
+    /// <summary>
+    /// ProtoBuf IFormatter implementation which serializes/deserializes object of type T
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public sealed class ProtoBufFormatter<T> : ProtoBufFormatter
+    {
+        /// <summary>
+        /// Create a typed formatter. Type name won't be prepended to the stream because the type is known.
+        /// </summary>
+        /// <param name="typeModel"></param>
+        /// <param name="useLengthPrefix"></param>
+        public ProtoBufFormatter(RuntimeTypeModel typeModel = null, bool useLengthPrefix = false) 
+            : base(includeTypeName: false, typeModel: typeModel, useLengthPrefix: useLengthPrefix)
+        {}
+
+        /// <summary>
+        /// Derive the type from the generic type parameter as opposed to reading the type name from the stream
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <returns></returns>
+        protected override Type GetType(Stream stream)
+        {
+            return typeof (T);
+        }
     }
 }

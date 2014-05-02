@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using ProtoBuf;
-using OrigoDB.Modules.ProtoBuf;
+﻿using ProtoBuf;
 
 namespace Modules.ProtoBuf.Test.Domain
 {

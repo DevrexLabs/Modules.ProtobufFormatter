@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using OrigoDB.Modules.Protobuf;
 using OrigoDB.Modules.ProtoBuf;
 using System.Runtime.Serialization;
 using Modules.ProtoBuf.Test.Framework;
@@ -35,10 +34,9 @@ namespace Modules.ProtoBuf.Test
             var graph = new Employee(16) { Name = "Kalle", Age = 42 };
 
             // Act
-            var stream = SerializationHelper.Serialize<Employee>(graph, formatter);
-            var result = SerializationHelper.Deserialize<Employee>(stream, formatter);
+            var result = SerializationHelper.Clone<Employee>(graph, formatter);
 
-            // Act
+            // Assert
             Assert.IsInstanceOf<Employee>(result);
             Assert.AreEqual("Kalle", result.Name);
             Assert.AreEqual(42, result.Age);
@@ -49,9 +47,7 @@ namespace Modules.ProtoBuf.Test
         public void CanDeserializeComplexType()
         {
             // Arrange
-            var modelBuilder = new RuntimeTypeModelBuilder();
-            modelBuilder.Add(typeof(Employee));
-            var formatter = new ProtoBufFormatter();
+            var formatter = new ProtoBufFormatter<Company>();
             var graph = new Company() {
                 Name = "Initech Corporation",
                 Employees = new List<Employee> {
@@ -60,35 +56,15 @@ namespace Modules.ProtoBuf.Test
                     }
             };
 
-            //hack. triggers E#mployee type to be added to the TypeModel
-            //SerializationHelper.Serialize(new Employee(), formatter);
-            
             // Act
-            var stream = SerializationHelper.Serialize<Company>(graph, formatter);
-            var result = SerializationHelper.Deserialize<Company>(stream, formatter);
+            var result = SerializationHelper.Clone<Company>(graph, formatter);
 
-            // Act
+            // Assert
             Assert.AreEqual("Initech Corporation", result.Name);
             Assert.IsNotNull(result.Employees);
             Assert.AreEqual(2, result.Employees.Count);
             Assert.AreEqual("Peter Gibbons", result.Employees.ElementAt(0).Name);
             Assert.AreEqual("Michael Bolton", result.Employees.ElementAt(1).Name);
-        }
-
-        [Test]
-        public void NonSerializedTypeIsNotConsideredKnown()
-        {
-            var formatter = new ProtoBufFormatter();
-            Assert.IsFalse(formatter.IsKnownType(typeof(Employee)));
-        }
-
-        [Test]
-        public void SerializedTypeIsConsideredKnown()
-        {
-            var formatter = new ProtoBufFormatter();
-            var graph = new Employee();
-            var stream = SerializationHelper.Serialize<Employee>(graph, formatter);
-            Assert.IsTrue(formatter.IsKnownType(typeof(Employee)));
         }
     }
 }

@@ -8,7 +8,7 @@ namespace Modules.ProtoBuf.Test.Framework
         internal static Stream Serialize<T>(T instance, ProtoBufFormatter formatter = null)
         {
             formatter = formatter ?? new ProtoBufFormatter();
-            MemoryStream stream = new MemoryStream();
+            var stream = new MemoryStream();
             formatter.Serialize(stream, instance);
             stream.Position = 0;
             return stream;
@@ -18,6 +18,11 @@ namespace Modules.ProtoBuf.Test.Framework
         {
             formatter = formatter ?? new ProtoBufFormatter();
             return (T)formatter.Deserialize(stream);
+        }
+
+        internal static T Clone<T>(T item, ProtoBufFormatter formatter = null)
+        {
+            return Deserialize<T>(Serialize(item, formatter), formatter);
         }
     }
 }

@@ -13,10 +13,11 @@
     <projectUrl>https://github.com/devrexlabs/modules.protobufformatter</projectUrl>
     <licenseUrl>https://github.com/devrexlabs/origodb#license</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <releaseNotes>https://github.com/devrexlabs/origodb/releases</releaseNotes>
+    <releaseNotes>https://github.com/devrexlabs/modules.protobufformatter</releaseNotes>
     <tags>in-memory imdb nosql prevalence odbms database imc</tags>
     <dependencies>
 		<dependency id="protobuf-net" version="2.0.0"/>
+		<dependency id="origodb.core" version="0.13.0"/>
     </dependencies>
   </metadata>
   <files>

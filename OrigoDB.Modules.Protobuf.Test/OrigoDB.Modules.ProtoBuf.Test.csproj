@@ -38,9 +38,9 @@
     <Reference Include="nunit.framework">
       <HintPath>..\packages\NUnit.2.6.3\lib\nunit.framework.dll</HintPath>
     </Reference>
-    <Reference Include="OrigoDB.Core, Version=0.12.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="OrigoDB.Core, Version=0.13.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\OrigoDB.Core.0.12.0\lib\net40\OrigoDB.Core.dll</HintPath>
+      <HintPath>..\packages\OrigoDB.Core.0.13.0\lib\net40\OrigoDB.Core.dll</HintPath>
     </Reference>
     <Reference Include="protobuf-net, Version=2.0.0.668, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -50,6 +50,7 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
     <CodeAnalysisDependentAssemblyPaths Condition=" '$(VS100COMNTOOLS)' != '' " Include="$(VS100COMNTOOLS)..\IDE\PrivateAssemblies">
@@ -57,13 +58,13 @@
     </CodeAnalysisDependentAssemblyPaths>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Domain\TodoModel.cs" />
     <Compile Include="Framework\SerializationHelper.cs" />
     <Compile Include="Domain\Employee.cs" />
     <Compile Include="Domain\Company.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ProtoBufFormatterTests.cs" />
-    <Compile Include="ProtoBufStreamHeaderTests.cs" />
-    <Compile Include="SmokeTests.cs" />
+    <Compile Include="TodoModelTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

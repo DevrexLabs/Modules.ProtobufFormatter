@@ -35,6 +35,10 @@
     <DocumentationFile>bin\Release\OrigoDb.Modules.Protobuf.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="OrigoDB.Core, Version=0.13.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\OrigoDB.Core.0.13.0\lib\net40\OrigoDB.Core.dll</HintPath>
+    </Reference>
     <Reference Include="protobuf-net, Version=2.0.0.668, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
@@ -51,8 +55,6 @@
     <Compile Include="ProtoBufFormatterException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ProtoBufFormatter.cs" />
-    <Compile Include="ProtoBufStreamHeader.cs" />
-    <Compile Include="RuntimeTypeModelBuilder.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
