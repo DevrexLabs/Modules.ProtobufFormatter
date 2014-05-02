@@ -3,6 +3,9 @@ using System.IO;
 using System.Linq;
 using Modules.ProtoBuf.Test.Domain;
 using NUnit.Framework;
+using OrigoDB.Core;
+using OrigoDB.Core.Test;
+using OrigoDB.Modules.ProtoBuf;
 using ProtoBuf;
 using ProtoBuf.Meta;
 
@@ -111,6 +114,19 @@ namespace Modules.ProtoBuf.Test
             model.SetCategories(sleep, "Boring", "Health");
             model.SetCategories(play, "Fun", "Health");
             return model;
+        }
+
+        [Test]
+        public void Full_stack_smoke_test()
+        {
+            var config = new EngineConfiguration().ForIsolatedTest();
+            ProtoBufFormatter.ConfigureSnapshots<TodoModel>(config, null);
+            Engine<TodoModel> engine = Engine.Create(BuildComplexModel(), config);
+            engine.CreateSnapshot();
+            engine.Close();
+            engine = Engine.Load<TodoModel>(config);
+            var model = (TodoModel) engine.GetModel();
+            Dump(model);
         }
     }
 }

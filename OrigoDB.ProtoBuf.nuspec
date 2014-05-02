@@ -13,7 +13,7 @@
     <projectUrl>https://github.com/devrexlabs/modules.protobufformatter</projectUrl>
     <licenseUrl>https://github.com/devrexlabs/origodb#license</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <releaseNotes>https://github.com/devrexlabs/modules.protobufformatter</releaseNotes>
+    <releaseNotes>https://github.com/devrexlabs/modules.protobufformatter/releases</releaseNotes>
     <tags>in-memory imdb nosql prevalence odbms database imc</tags>
     <dependencies>
 		<dependency id="protobuf-net" version="2.0.0"/>
@@ -21,9 +21,7 @@
     </dependencies>
   </metadata>
   <files>
-	<file src="build\OrigoDB.*.dll" target="lib\net40" />
-    <file src="build\OrigoDB.*.pdb" target="lib\net40" />
-    <file src="build\OrigoDB.*.XML" target="lib\net40" />
+	<file src="build\OrigoDB.Modules.Protobuf.*" target="lib\net40" />
     <file src="OrigoDB.Modules.Protobuf\**\*.cs" target="src" />
   </files>
 </package>
