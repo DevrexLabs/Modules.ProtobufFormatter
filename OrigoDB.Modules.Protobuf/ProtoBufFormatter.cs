@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.IO;
 using System.Text;
 using OrigoDB.Core;
-using OrigoDB.Core.Journaling;
 using ProtoBuf;
 using ProtoBuf.Meta;
 using OrigoDB.Core.Utilities;
@@ -38,7 +38,8 @@ namespace OrigoDB.Modules.ProtoBuf
         /// </summary>
         public SerializationBinder Binder
         {
-            get; set;
+            get;
+            set;
         }
 
         /// <summary>
@@ -46,7 +47,7 @@ namespace OrigoDB.Modules.ProtoBuf
         /// </summary>
         public StreamingContext Context
         {
-            get; 
+            get;
             set;
         }
 
@@ -70,18 +71,6 @@ namespace OrigoDB.Modules.ProtoBuf
             Context = new StreamingContext(StreamingContextStates.Persistence);
         }
 
-        /// <summary>
-        /// Dynamically configure the origodb types written to the journal
-        /// </summary>
-        private void RegisterJournalTypes()
-        {
-            //TODO: incomplete
-            var je = _typeModel.Add(typeof(JournalEntry), false);
-            je.AddField(1, "Id");
-            je.AddField(2, "Created");
-            je.AddSubType(3, typeof(JournalEntry<RollbackMarker>));
-            je.AddSubType(4, typeof(JournalEntry<Command>)).Add(1, "Item");
-        }
 
         /// <summary>
         /// Deserializes the data on the provided stream and 
@@ -112,7 +101,7 @@ namespace OrigoDB.Modules.ProtoBuf
             Ensure.NotNull(stream, "stream");
             Ensure.NotNull(graph, "graph");
 
-            if (IncludeTypeName) 
+            if (IncludeTypeName)
                 new BinaryWriter(stream, Encoding.UTF8)
                 .Write(graph.GetType().AssemblyQualifiedName);
 
@@ -139,41 +128,37 @@ namespace OrigoDB.Modules.ProtoBuf
         }
 
         /// <summary>
-        /// Modify the given configuration to use ProtoBuf formatting
+        /// Modify the given configuration to use ProtoBuf formatting to clone results
         /// </summary>
         /// <param name="config"></param>
-        /// <param name="usage">the usage to configure</param>
         /// <param name="typeModel">An optional typemodel</param>
-        public static void Configure(EngineConfiguration config, FormatterUsage usage, RuntimeTypeModel typeModel = null)
+        public static void ConfigureResultCloning(EngineConfiguration config, RuntimeTypeModel typeModel = null)
         {
-            switch (usage)
-            {
-                case FormatterUsage.Default:
-                    throw new NotSupportedException("Call with a specific usage, not FormatterUsage.Default");
-                case FormatterUsage.Snapshot:
-                    throw new NotSupportedException("Can't configure for snapshots without a type parameter, call ConfigureSnapshots<T> passing the type of the model instead");
-                case FormatterUsage.Journal:
-                    config.SetFormatterFactory((cfg, fu) => new ProtoBufFormatter<JournalEntry>(typeModel: typeModel, useLengthPrefix: true), usage);
-                    break;
-                case FormatterUsage.Results:
-                    config.SetFormatterFactory((cfg,fu) => new ProtoBufFormatter(typeModel, true, true), usage);
-                    break;
-                case FormatterUsage.Messages:
-                    throw new NotSupportedException("Not supported in this version of the module");
-                default:
-                    throw new ArgumentOutOfRangeException("usage");
-            }
+            config.SetFormatterFactory((cfg, fu) => new ProtoBufFormatter(typeModel, true, true), FormatterUsage.Results);
         }
 
         /// <summary>
-        /// Modify the given configuration to use ProtoBuf formatting for snapshots.
+        /// Modify the given configuration to use ProtoBuf formatting for snapshots of type T.
         /// </summary>
         /// <typeparam name="T">The concrete type of the model</typeparam>
-        /// <param name="config">the configuration to modify</param>
-        /// <param name="typeModel">An optional runtime type configuration</param>
-        public static void ConfigureSnapshots<T>(EngineConfiguration config, RuntimeTypeModel typeModel)
+        public static void ConfigureSnapshots<T>(EngineConfiguration config, RuntimeTypeModel typeModel = null) where T : Model
         {
-            config.SetFormatterFactory((cfg,fu) => new ProtoBufFormatter<T>(typeModel: typeModel), FormatterUsage.Snapshot);
+            config.SetFormatterFactory((cfg, fu) => new ProtoBufFormatter<T>(typeModel), FormatterUsage.Snapshot);
+        }
+
+        /// <summary>
+        /// Modify the given EngineConfiguration to use ProtoBuf for journaling. Pass unique ints for each type of command.
+        /// The id's must be maintained across versions of your assembly.
+        /// </summary>
+        public static void ConfigureJournaling(EngineConfiguration config, IDictionary<Type, int> commandTypeTags, RuntimeTypeModel typeModel = null)
+        {
+            config.SetFormatterFactory((cfg, fu) =>
+            {
+                var formatter = new ProtoBufFormatter<JournalEntry>(typeModel, includeTypeName: false, useLengthPrefix: true);
+                typeModel.RegisterCommandSubTypes(commandTypeTags);
+                return formatter;
+            }, 
+            FormatterUsage.Journal);
         }
     }
 
@@ -186,11 +171,9 @@ namespace OrigoDB.Modules.ProtoBuf
         /// <summary>
         /// Create a typed formatter. Type name won't be prepended to the stream because the type is known.
         /// </summary>
-        /// <param name="typeModel"></param>
-        /// <param name="useLengthPrefix"></param>
-        public ProtoBufFormatter(RuntimeTypeModel typeModel = null, bool useLengthPrefix = false) 
-            : base(includeTypeName: false, typeModel: typeModel, useLengthPrefix: useLengthPrefix)
-        {}
+        public ProtoBufFormatter(RuntimeTypeModel typeModel = null, bool useLengthPrefix = false, bool includeTypeName = false)
+            : base(includeTypeName: includeTypeName, typeModel: typeModel, useLengthPrefix: useLengthPrefix)
+        { }
 
         /// <summary>
         /// Derive the type from the generic type parameter as opposed to reading the type name from the stream
@@ -199,7 +182,7 @@ namespace OrigoDB.Modules.ProtoBuf
         /// <returns></returns>
         protected override Type GetType(Stream stream)
         {
-            return typeof (T);
+            return typeof(T);
         }
     }
 }

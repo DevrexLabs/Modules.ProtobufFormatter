@@ -62,6 +62,7 @@
     <Compile Include="Framework\SerializationHelper.cs" />
     <Compile Include="Domain\Employee.cs" />
     <Compile Include="Domain\Company.cs" />
+    <Compile Include="JournalFormattingTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ProtoBufFormatterTests.cs" />
     <Compile Include="TodoModelTests.cs" />
